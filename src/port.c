@@ -103,9 +103,23 @@ char * ortp_strdup(const char *tmp){
  */
 int set_non_blocking_socket (ortp_socket_t sock){
 #if	!defined(_WIN32) && !defined(_WIN32_WCE)
-	return fcntl (sock, F_SETFL, O_NONBLOCK);
+	return fcntl (sock, F_SETFL, fcntl(sock,F_GETFL) | O_NONBLOCK);
 #else
 	unsigned long nonBlock = 1;
+	return ioctlsocket(sock, FIONBIO , &nonBlock);
+#endif
+}
+
+/*
+ * this method is an utility method that calls fnctl() on UNIX or
+ * ioctlsocket on Win32.
+ * int retrun the result of the system method
+ */
+int set_blocking_socket (ortp_socket_t sock){
+#if	!defined(_WIN32) && !defined(_WIN32_WCE)
+	return fcntl (sock, F_SETFL, fcntl(sock, F_GETFL) & ~O_NONBLOCK);
+#else
+	unsigned long nonBlock = 0;
 	return ioctlsocket(sock, FIONBIO , &nonBlock);
 #endif
 }
@@ -706,7 +720,7 @@ void ortp_shm_close(void *mem){
 
 void _ortp_get_cur_time(ortpTimeSpec *ret, bool_t realtime){
 #if defined(_WIN32_WCE) || defined(_WIN32)
-#ifdef ORTP_WINDOWS_DESKTOP
+#if defined( ORTP_WINDOWS_DESKTOP ) && !defined(ENABLE_MICROSOFT_STORE_APP)
 	DWORD timemillis;
 #	if defined(_WIN32_WCE)
 	timemillis=GetTickCount();
@@ -771,7 +785,7 @@ void ortp_sleep_ms(int ms){
 }
 
 void ortp_sleep_until(const ortpTimeSpec *ts){
-#ifdef __linux
+#ifdef __linux__
 	struct timespec rq;
 	rq.tv_sec=ts->tv_sec;
 	rq.tv_nsec=ts->tv_nsec;
@@ -849,7 +863,7 @@ static int ortp_wincrypto_random(unsigned int *rand_number){
 	return 0;
 }
 #endif
-#elif defined(__QNXNTO__) || ((defined(__linux) || defined(__APPLE__)) && !defined(HAVE_ARC4RANDOM))
+#elif defined(__QNXNTO__) || ((defined(__linux__) || defined(__APPLE__)) && !defined(HAVE_ARC4RANDOM))
 
 static unsigned int ortp_urandom(void) {
 	static int fd=-1;
@@ -875,7 +889,7 @@ unsigned int ortp_random(void){
 #else
 	return arc4random();
 #endif
-#elif defined(__linux) || defined(__APPLE__)
+#elif defined(__linux__) || defined(__APPLE__)
 	return ortp_urandom();
 #elif defined(_WIN32)
 	static int initd=0;

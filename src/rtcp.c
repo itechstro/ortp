@@ -384,8 +384,8 @@ static size_t rtcp_app_init(RtpSession *session, uint8_t *buf, uint8_t subtype, 
 	if (size<sizeof(rtcp_app_t)) return 0;
 	rtcp_common_header_init(&app->ch,session,RTCP_APP,subtype,size);
 	app->ssrc=htonl(session->snd.ssrc);
-	memset(app->name,0,4);
-	strncpy(app->name,name,4);
+	memset(app->name, 0, 4);
+	strncpy(app->name, name, sizeof(app->name) - 1);
 	return sizeof(rtcp_app_t);
 }
 
@@ -487,7 +487,7 @@ static void rtp_session_create_and_send_rtcp_packet(RtpSession *session, bool_t 
 }
 
 static float rtcp_rand(float t) {
-	return t * ((rand() / (RAND_MAX * 1.0f)) + 0.5f);
+	return t * ((rand() / ((float)RAND_MAX)) + 0.5f);
 }
 
 /**
